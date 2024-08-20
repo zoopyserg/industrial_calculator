@@ -3,13 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Конфігуратор сонячних панелей</title>
+    <title>Конфігуратор системи сонячних панелей</title>
     <!-- Vue.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
     <!-- Tailwind CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <!-- Подключение иконок Heroicons -->
     <script src="https://unpkg.com/heroicons@1.0.6/dist/outline.js"></script>
+    <style>
+        /* Custom styles for radio buttons and checkboxes */
+        .custom-checkbox, .custom-radio {
+            appearance: none;
+            background-color: #fff;
+            margin: 0;
+            font: inherit;
+            color: currentColor;
+            width: 1.5em;
+            height: 1.5em;
+            border: 2px solid #ccc;
+            border-radius: 0.25em;
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+        }
+
+        .custom-checkbox:checked {
+            background-color: #3b82f6; /* Более мягкий синий цвет */
+            border-color: #3b82f6;
+        }
+
+        .custom-radio {
+            border-radius: 50%;
+        }
+
+        .custom-radio:checked {
+            background-color: #3b82f6; /* Более мягкий синий цвет */
+            border-color: #3b82f6;
+        }
+
+        /* Custom styles for dropdown categories */
+        .category-dropdown {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .category-content {
+            overflow: hidden; /* ensure smooth transitions */
+            transition: max-height 0.3s ease-out;
+        }
+
+        .category-dropdown.open .category-content {
+            display: block;
+            max-height: 1000px; /* set a high max-height value to allow all content to be visible */
+        }
+
+        .category-dropdown:hover {
+            background-color: #f3f4f6;
+        }
+
+        /* Add arrow indicator for dropdown */
+        .category-dropdown::after {
+            content: '>';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: transform 0.3s ease;
+        }
+
+        .category-dropdown.open::after {
+            transform: translateY(-50%) rotate(90deg);
+        }
+
+        /* Styles for the total summary */
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Additional spacing for better readability */
+        .custom-radio-label,
+        .custom-checkbox-label {
+            margin-left: 0.5rem;
+        }
+
+        .summary-buttons {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+    </style>
 </head>
 <body class="bg-gray-200 min-h-screen flex items-center justify-center">
     <div id="app" class="max-w-4xl mx-auto py-10 px-5 bg-white rounded-lg shadow-lg">
@@ -23,7 +113,7 @@
                     v-for="type in systemTypes"
                     :key="type.value"
                     @click="selectType(type.value)"
-                    :class="['p-4 bg-gray-200 rounded-lg cursor-pointer border-2 transition transform duration-300 flex items-center',
+                    :class="['p-4 bg-gray-200 rounded-lg cursor-pointer border-2 transition transform duration-300 flex items-start',
                     { 'bg-blue-50 border-blue-500': selectedType === type.value }]"
                 >
                     <input
@@ -31,9 +121,12 @@
                         :id="type.value"
                         v-model="selectedType"
                         :value="type.value"
-                        class="mr-2"
+                        class="custom-radio mr-4 mt-1"
                     >
-                    <label :for="type.value" class="inline-block cursor-pointer w-full">{{ type.label }}</label>
+                    <div>
+                        <label :for="type.value" class="block text-lg font-semibold cursor-pointer custom-radio-label">{{ type.label }}</label>
+                        <p class="text-gray-500 text-sm">{{ type.description }}</p>
+                    </div>
                 </div>
             </div>
             <div class="flex justify-between mt-6">
@@ -45,18 +138,32 @@
         <!-- Шаг 2: Выбор опций -->
         <div v-if="step === 2">
             <h2 class="text-xl font-semibold mb-4">Крок 2: Оберіть опції</h2>
-            <div class="space-y-3">
-                <div v-for="option in filteredOptions" :key="option.name" class="flex items-center space-x-3">
-                    <input
-                        type="checkbox"
-                        :id="option.name"
-                        v-model="option.selected"
-                        class="hidden"
-                    >
-                    <label :for="option.name" class="flex items-center px-4 py-2 bg-gray-200 rounded-lg cursor-pointer border-2 transition transform duration-300" :class="{ 'bg-blue-50 border-blue-500': option.selected }">
-                        <input type="checkbox" class="mr-2" :checked="option.selected" @change="toggleOption(option)">
-                        {{ option.label }} (Ціна: ₴{{ option.price }})
-                    </label>
+            <div v-for="category in categories" :key="category.name" class="mb-6">
+                <div
+                    class="category-dropdown bg-gray-100 p-4 rounded-lg"
+                    @click="toggleCategory(category)"
+                    :class="{ 'open': category.open }"
+                >
+                    <h3 class="text-lg font-semibold">{{ category.name }}</h3>
+                    <p class="text-gray-500 text-sm">{{ category.description }}</p>
+                </div>
+                <div
+                    v-if="category.open"
+                    class="category-content pl-6 mt-2"
+                >
+                    <div v-for="option in category.options" :key="option.name" class="flex items-start mb-4">
+                        <input
+                            type="checkbox"
+                            :id="option.name"
+                            v-model="option.selected"
+                            class="custom-checkbox mr-4 mt-1"
+                        >
+                        <div>
+                            <label :for="option.name" class="block text-lg font-semibold cursor-pointer custom-checkbox-label">{{ option.label }}</label>
+                            <p class="text-gray-500 text-sm">{{ option.description }}</p>
+                            <p class="text-gray-800 font-semibold">Ціна: ₴{{ option.price }}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="flex justify-between mt-6">
@@ -83,12 +190,10 @@
                     type="checkbox"
                     id="needBatteries"
                     v-model="needBatteries"
-                    class="hidden"
+                    class="custom-checkbox mr-2"
                 >
-                <label for="needBatteries" class="flex items-center px-4 py-2 bg-gray-200 rounded-lg cursor-pointer border-2 transition transform duration-300" :class="{ 'bg-blue-50 border-blue-500': needBatteries }">
-                    <input type="checkbox" class="mr-2" :checked="needBatteries" @change="needBatteries = !needBatteries">
-                    Потрібні акумулятори (Ціна: ₴500 за одиницю)
-                </label>
+                <label for="needBatteries" class="text-lg font-semibold">Потрібні акумулятори</label>
+                <p class="text-gray-500 text-sm">Ціна: ₴500 за одиницю</p>
             </div>
             <div class="flex justify-between">
                 <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-gray-600 hover:scale-105" @click="prevStep">Назад</button>
@@ -100,9 +205,12 @@
         <div v-if="step === 4">
             <h2 class="text-xl font-semibold mb-4">Підсумок</h2>
             <div class="bg-gray-100 p-4 rounded-lg space-y-4">
-                <div v-for="(option, index) in selectedOptions" :key="option.name" class="flex justify-between items-center">
-                    <span>{{ option.label }} (x{{ option.quantity }})</span>
-                    <div class="flex space-x-2 items-center">
+                <div v-for="(option, index) in selectedOptions" :key="option.name" class="summary-item">
+                    <div>
+                        <span class="block font-semibold">{{ option.label }} (x{{ option.quantity }})</span>
+                        <p class="text-gray-500 text-sm">{{ option.description }}</p>
+                    </div>
+                    <div class="summary-buttons">
                         <button @click="decrementQuantity(option)" class="py-1 px-2 bg-gray-300 text-gray-700 font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-gray-400">-</button>
                         <span>₴{{ option.price * option.quantity }}</span>
                         <button @click="incrementQuantity(option)" class="py-1 px-2 bg-gray-300 text-gray-700 font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-gray-400">+</button>
@@ -113,12 +221,18 @@
                         </button>
                     </div>
                 </div>
-                <div class="flex justify-between items-center" v-if="needBatteries">
-                    <span>Акумулятори</span>
+                <div class="summary-item" v-if="needBatteries">
+                    <div>
+                        <span class="block font-semibold">Акумулятори</span>
+                        <p class="text-gray-500 text-sm">Для зберігання енергії</p>
+                    </div>
                     <span>₴{{ 500 * panelCount }}</span>
                 </div>
-                <div class="flex justify-between items-center">
-                    <span>Кількість панелей</span>
+                <div class="summary-item">
+                    <div>
+                        <span class="block font-semibold">Кількість панелей</span>
+                        <p class="text-gray-500 text-sm">Кількість сонячних панелей у системі</p>
+                    </div>
                     <span>{{ panelCount }}</span>
                 </div>
                 <div class="text-xl font-bold text-right">
@@ -143,25 +257,52 @@
                 panelCount: 1,
                 needBatteries: false,
                 systemTypes: [
-                    { label: 'Автономна система', value: 'autonomous' },
-                    { label: 'Мережева система', value: 'grid' },
-                    { label: 'Гібридна система', value: 'hybrid' },
+                    { label: 'Автономна система', value: 'autonomous', description: 'Система, яка працює незалежно від електромережі.' },
+                    { label: 'Мережева система', value: 'grid', description: 'Система, яка підключена до електромережі.' },
+                    { label: 'Гібридна система', value: 'hybrid', description: 'Комбінація автономної та мережевої системи.' },
                 ],
-                options: [
-                    { name: 'mounting', label: 'Кріплення для панелей', price: 200, selected: false, quantity: 1, applicableTo: ['autonomous', 'grid', 'hybrid'] },
-                    { name: 'controller', label: 'Контролер заряду', price: 150, selected: false, quantity: 1, applicableTo: ['autonomous', 'hybrid'] },
-                    { name: 'battery', label: 'Акумуляторна батарея', price: 500, selected: false, quantity: 1, applicableTo: ['autonomous', 'hybrid'] },
-                    { name: 'inverter', label: 'Інвертор', price: 700, selected: false, quantity: 1, applicableTo: ['grid', 'hybrid'] },
-                    { name: 'ecoflow', label: 'EcoFlow станція', price: 1000, selected: false, quantity: 1, applicableTo: ['autonomous'] },
-                    { name: 'monitoring', label: 'Система моніторингу', price: 300, selected: false, quantity: 1, applicableTo: ['grid', 'hybrid'] },
-                ],
+                categories: [
+                    {
+                        name: 'Кріплення та підтримка',
+                        description: 'Обладнання для кріплення та підтримки сонячних панелей.',
+                        open: false,
+                        options: [
+                            { name: 'mounting', label: 'Кріплення для панелей', description: 'Надійне кріплення для вашої сонячної панелі.', price: 200, selected: false, quantity: 1 },
+                            { name: 'support', label: 'Підтримка панелей', description: 'Додаткова підтримка для панелей.', price: 150, selected: false, quantity: 1 }
+                        ]
+                    },
+                    {
+                        name: 'Контролери та інвертори',
+                        description: 'Контролери заряду та інвертори для керування вашою системою.',
+                        open: false,
+                        options: [
+                            { name: 'controller', label: 'Контролер заряду', description: 'Керує процесом зарядки акумуляторів.', price: 150, selected: false, quantity: 1 },
+                            { name: 'inverter', label: 'Інвертор', description: 'Перетворює постійний струм на змінний.', price: 700, selected: false, quantity: 1 }
+                        ]
+                    },
+                    {
+                        name: 'Акумулятори та зберігання енергії',
+                        description: 'Акумулятори для зберігання енергії.',
+                        open: false,
+                        options: [
+                            { name: 'battery', label: 'Акумуляторна батарея', description: 'Зберігає енергію для подальшого використання.', price: 500, selected: false, quantity: 1 },
+                            { name: 'ecoflow', label: 'EcoFlow станція', description: 'Мобільна станція зберігання енергії.', price: 1000, selected: false, quantity: 1 }
+                        ]
+                    },
+                    {
+                        name: 'Моніторинг та керування',
+                        description: 'Системи моніторингу та керування для вашої системи.',
+                        open: false,
+                        options: [
+                            { name: 'monitoring', label: 'Система моніторингу', description: 'Відстежує стан системи та ефективність роботи.', price: 300, selected: false, quantity: 1 },
+                            { name: 'control', label: 'Керуючий пристрій', description: 'Дистанційне керування системою.', price: 250, selected: false, quantity: 1 }
+                        ]
+                    }
+                ]
             },
             computed: {
-                filteredOptions() {
-                    return this.options.filter(option => option.applicableTo.includes(this.selectedType));
-                },
                 selectedOptions() {
-                    return this.filteredOptions.filter(option => option.selected);
+                    return this.categories.flatMap(category => category.options.filter(option => option.selected));
                 },
                 totalCost() {
                     let cost = this.selectedOptions.reduce((sum, option) => sum + (option.price * option.quantity), 0);
@@ -173,8 +314,11 @@
                 selectType(type) {
                     this.selectedType = type;
                 },
-                toggleOption(option) {
-                    option.selected = !option.selected;
+                toggleCategory(category) {
+                    category.open = !category.open;
+                    console.log(category.open);
+                    console.log(category.name);
+                    console.log(category.options);
                 },
                 incrementQuantity(option) {
                     option.quantity++;
