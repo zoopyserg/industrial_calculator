@@ -6,145 +6,130 @@
     <title>Camera System Configurator</title>
     <!-- Vue.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
-    <!-- Minimal CSS -->
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        .step {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin: 5px 0;
-        }
-        select, input[type="number"], input[type="checkbox"] {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-align: center;
-            font-size: 16px;
-        }
-        .btn:hover {
-            background-color: #218838;
-        }
-        .summary {
-            background-color: #f8f9fa;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 20px;
-        }
-        .summary-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        .summary-total {
-            font-weight: bold;
-            font-size: 18px;
-        }
-    </style>
+    <!-- Tailwind CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Подключение иконок Heroicons -->
+    <script src="https://unpkg.com/heroicons@1.0.6/dist/outline.js"></script>
 </head>
-<body>
-    <div id="app" class="container">
-        <h1>Camera System Configurator</h1>
+<body class="bg-gray-200 min-h-screen flex items-center justify-center">
+    <div id="app" class="max-w-xl mx-auto py-10 px-5 bg-white rounded-lg shadow-lg">
+        <h1 class="text-2xl font-bold text-center">Camera System Configurator</h1>
 
         <!-- Шаг 1: Выбор типа объекта -->
-        <div class="step" v-if="step === 1">
-            <h2>Step 1: Select Object Type</h2>
-            <label>
-                <select v-model="selectedType">
-                    <option disabled value="">Please select one</option>
-                    <option value="Apartment">Apartment</option>
-                    <option value="House">House</option>
-                    <option value="Office">Office</option>
-                    <option value="Business">Business</option>
-                </select>
-            </label>
-            <button class="btn" @click="nextStep" :disabled="!selectedType">Next</button>
+        <div v-if="step === 1">
+            <h2 class="text-xl font-semibold mb-4">Step 1: Select Object Type</h2>
+            <div class="space-y-4">
+                <div
+                    v-for="type in objectTypes"
+                    :key="type.value"
+                    @click="selectType(type.value)"
+                    :class="['p-4 bg-gray-200 rounded-lg cursor-pointer border-2 transition transform duration-300 flex items-center',
+                    { 'bg-blue-50 border-blue-500': selectedType === type.value }]"
+                >
+                    <input
+                        type="radio"
+                        :id="type.value"
+                        v-model="selectedType"
+                        :value="type.value"
+                        class="mr-2"
+                    >
+                    <label :for="type.value" class="inline-block cursor-pointer w-full">{{ type.label }}</label>
+                </div>
+            </div>
+            <div class="flex justify-between mt-6">
+                <span></span>
+                <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-blue-600 hover:scale-105" @click="nextStep" :disabled="!selectedType">Next</button>
+            </div>
         </div>
 
         <!-- Шаг 2: Выбор опций -->
-        <div class="step" v-if="step === 2">
-            <h2>Step 2: Select Options</h2>
-            <div v-if="selectedType">
-                <label><input type="checkbox" v-model="options.wiredSurveillance"> Wired Surveillance (Cost: $300)</label>
-                <label><input type="checkbox" v-model="options.wirelessSurveillance"> Wireless Surveillance (Cost: $500)</label>
-                <label><input type="checkbox" v-model="options.videoRecording"> Video Recording (Cost: $200)</label>
+        <div v-if="step === 2">
+            <h2 class="text-xl font-semibold mb-4">Step 2: Select Options</h2>
+            <div class="space-y-3">
+                <div v-for="option in options" :key="option.name" class="flex items-center space-x-3">
+                    <input
+                        type="checkbox"
+                        :id="option.name"
+                        v-model="option.selected"
+                        class="hidden"
+                    >
+                    <label :for="option.name" class="flex items-center px-4 py-2 bg-gray-200 rounded-lg cursor-pointer border-2 transition transform duration-300" :class="{ 'bg-blue-50 border-blue-500': option.selected }">
+                        <input type="checkbox" class="mr-2" :checked="option.selected" @change="toggleOption(option)">
+                        {{ option.label }} (Cost: ${{ option.price }})
+                    </label>
+                </div>
             </div>
-            <button class="btn" @click="nextStep">Next</button>
+            <div class="flex justify-between mt-6">
+                <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-gray-600 hover:scale-105" @click="prevStep">Back</button>
+                <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-blue-600 hover:scale-105" @click="nextStep">Next</button>
+            </div>
         </div>
 
         <!-- Шаг 3: Количество комнат и бесперебойное питание -->
-        <div class="step" v-if="step === 3">
-            <h2>Step 3: Room Information</h2>
-            <label>
+        <div v-if="step === 3">
+            <h2 class="text-xl font-semibold mb-4">Step 3: Room Information</h2>
+            <label class="block mb-4">
                 Number of Rooms:
-                <input type="number" v-model="roomCount" min="1" max="10">
+                <input
+                    type="number"
+                    v-model="roomCount"
+                    min="1"
+                    max="10"
+                    class="p-2 w-full border border-gray-300 rounded-lg"
+                >
             </label>
-            <label>
-                <input type="checkbox" v-model="hasBackupPower"> Backup Power Supply (Cost: $100)
-            </label>
-            <button class="btn" @click="nextStep">Show Summary</button>
+            <div class="flex items-center space-x-3 mb-6">
+                <input
+                    type="checkbox"
+                    id="backupPower"
+                    v-model="hasBackupPower"
+                    class="hidden"
+                >
+                <label for="backupPower" class="flex items-center px-4 py-2 bg-gray-200 rounded-lg cursor-pointer border-2 transition transform duration-300" :class="{ 'bg-blue-50 border-blue-500': hasBackupPower }">
+                    <input type="checkbox" class="mr-2" :checked="hasBackupPower" @change="hasBackupPower = !hasBackupPower">
+                    Backup Power Supply (Cost: $100)
+                </label>
+            </div>
+            <div class="flex justify-between">
+                <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-gray-600 hover:scale-105" @click="prevStep">Back</button>
+                <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-blue-600 hover:scale-105" @click="nextStep">Show Summary</button>
+            </div>
         </div>
 
         <!-- Шаг 4: Итоговый заказ -->
-        <div class="step" v-if="step === 4">
-            <h2>Summary</h2>
-            <div class="summary">
-                <div class="summary-item" v-if="options.wiredSurveillance">
-                    <span>Wired Surveillance</span>
-                    <span>$300</span>
+        <div v-if="step === 4">
+            <h2 class="text-xl font-semibold mb-4">Summary</h2>
+            <div class="bg-gray-100 p-4 rounded-lg space-y-4">
+                <div v-for="(option, index) in selectedOptions" :key="option.name" class="flex justify-between items-center">
+                    <span>{{ option.label }} (x{{ option.quantity }})</span>
+                    <div class="flex space-x-2 items-center">
+                        <button @click="decrementQuantity(option)" class="py-1 px-2 bg-gray-300 text-gray-700 font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-gray-400">-</button>
+                        <span>${{ option.price * option.quantity }}</span>
+                        <button @click="incrementQuantity(option)" class="py-1 px-2 bg-gray-300 text-gray-700 font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-gray-400">+</button>
+                        <button @click="removeOption(option)" class="py-1 px-1 bg-red-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-red-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
-                <div class="summary-item" v-if="options.wirelessSurveillance">
-                    <span>Wireless Surveillance</span>
-                    <span>$500</span>
-                </div>
-                <div class="summary-item" v-if="options.videoRecording">
-                    <span>Video Recording</span>
-                    <span>$200</span>
-                </div>
-                <div class="summary-item">
-                    <span>Number of Rooms</span>
-                    <span>{{ roomCount }}</span>
-                </div>
-                <div class="summary-item" v-if="hasBackupPower">
+                <div class="flex justify-between items-center" v-if="hasBackupPower">
                     <span>Backup Power Supply</span>
                     <span>$100</span>
                 </div>
-                <div class="summary-total">
-                    <span>Total Cost</span>
-                    <span>${{ totalCost }}</span>
+                <div class="flex justify-between items-center">
+                    <span>Number of Rooms</span>
+                    <span>{{ roomCount }}</span>
+                </div>
+                <div class="text-xl font-bold text-right">
+                    <span>Total Cost: ${{ totalCost }}</span>
                 </div>
             </div>
-            <button class="btn" @click="saveAsPDF">Save as PDF</button>
+            <div class="flex justify-between mt-6">
+                <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-gray-600 hover:scale-105" @click="prevStep">Back</button>
+                <button class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-green-600 hover:scale-105" @click="addMoreOptions">Add More</button>
+                <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-blue-600 hover:scale-105" @click="saveAsPDF">Save as PDF</button>
+            </div>
         </div>
     </div>
 
@@ -155,27 +140,55 @@
             data: {
                 step: 1,
                 selectedType: '',
-                options: {
-                    wiredSurveillance: false,
-                    wirelessSurveillance: false,
-                    videoRecording: false,
-                },
                 roomCount: 1,
                 hasBackupPower: false,
+                objectTypes: [
+                    { label: 'Apartment', value: 'Apartment' },
+                    { label: 'House', value: 'House' },
+                    { label: 'Office', value: 'Office' },
+                    { label: 'Business', value: 'Business' },
+                ],
+                options: [
+                    { name: 'wiredSurveillance', label: 'Wired Surveillance', price: 300, selected: false, quantity: 1 },
+                    { name: 'wirelessSurveillance', label: 'Wireless Surveillance', price: 500, selected: false, quantity: 1 },
+                    { name: 'videoRecording', label: 'Video Recording', price: 200, selected: false, quantity: 1 },
+                ],
             },
             computed: {
+                selectedOptions() {
+                    return this.options.filter(option => option.selected);
+                },
                 totalCost() {
-                    let cost = 0;
-                    if (this.options.wiredSurveillance) cost += 300;
-                    if (this.options.wirelessSurveillance) cost += 500;
-                    if (this.options.videoRecording) cost += 200;
+                    let cost = this.selectedOptions.reduce((sum, option) => sum + (option.price * option.quantity), 0);
                     if (this.hasBackupPower) cost += 100;
                     return cost;
                 }
             },
             methods: {
+                selectType(type) {
+                    this.selectedType = type;
+                },
+                toggleOption(option) {
+                    option.selected = !option.selected;
+                },
+                incrementQuantity(option) {
+                    option.quantity++;
+                },
+                decrementQuantity(option) {
+                    if (option.quantity > 1) option.quantity--;
+                },
                 nextStep() {
                     this.step++;
+                },
+                prevStep() {
+                    this.step--;
+                },
+                removeOption(option) {
+                    option.selected = false;
+                    option.quantity = 1; // Сбросить количество при удалении
+                },
+                addMoreOptions() {
+                    this.step = 2;
                 },
                 saveAsPDF() {
                     alert('PDF generation is not implemented in this MVP.');
