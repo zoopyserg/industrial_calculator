@@ -10,6 +10,7 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <!-- Подключение иконок Heroicons -->
     <script src="https://unpkg.com/heroicons@1.0.6/dist/outline.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
     <style>
         /* Custom styles for radio buttons and checkboxes */
         .custom-checkbox, .custom-radio {
@@ -242,7 +243,7 @@
             <div class="flex justify-between mt-6">
                 <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-gray-600 hover:scale-105" @click="prevStep">Назад</button>
                 <button class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-green-600 hover:scale-105" @click="addMoreOptions">Додати більше</button>
-                <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-blue-600 hover:scale-105" @click="saveAsPDF">Зберегти в PDF</button>
+                <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition transform duration-300 hover:bg-blue-600 hover:scale-105" @click="generatePDF">Зберегти в PDF</button>
             </div>
         </div>
     </div>
@@ -339,9 +340,63 @@
                 addMoreOptions() {
                     this.step = 2;
                 },
-                saveAsPDF() {
-                    alert('Збереження в PDF не реалізовано в цьому MVP.');
-                }
+                generatePDF() {
+                   // Создаем HTML-шаблон для инвойса
+                   const invoiceContent = `
+                       <div style="font-family: Arial, sans-serif; padding: 20px;">
+                           <h1 style="text-align: center;">Інвойс</h1>
+                           <h2>Вибрані опції:</h2>
+                           <table style="width: 100%; border-collapse: collapse;">
+                               <thead>
+                                   <tr>
+                                       <th style="border: 1px solid #dddddd; padding: 8px;">Назва</th>
+                                       <th style="border: 1px solid #dddddd; padding: 8px;">Опис</th>
+                                       <th style="border: 1px solid #dddddd; padding: 8px;">Кількість</th>
+                                       <th style="border: 1px solid #dddddd; padding: 8px;">Ціна за одиницю</th>
+                                       <th style="border: 1px solid #dddddd; padding: 8px;">Загальна ціна</th>
+                                   </tr>
+                               </thead>
+                               <tbody>
+                                   ${this.selectedOptions.map(option => `
+                                   <tr>
+                                       <td style="border: 1px solid #dddddd; padding: 8px;">${option.label}</td>
+                                       <td style="border: 1px solid #dddddd; padding: 8px;">${option.description}</td>
+                                       <td style="border: 1px solid #dddddd; padding: 8px; text-align: center;">${option.quantity}</td>
+                                       <td style="border: 1px solid #dddddd; padding: 8px; text-align: center;">₴${option.price}</td>
+                                       <td style="border: 1px solid #dddddd; padding: 8px; text-align: center;">₴${option.price * option.quantity}</td>
+                                   </tr>
+                                   `).join('')}
+                                   ${this.needBatteries ? `
+                                   <tr>
+                                       <td style="border: 1px solid #dddddd; padding: 8px;">Акумулятори</td>
+                                       <td style="border: 1px solid #dddddd; padding: 8px;">Для зберігання енергії</td>
+                                       <td style="border: 1px solid #dddddd; padding: 8px; text-align: center;">${this.panelCount}</td>
+                                       <td style="border: 1px solid #dddddd; padding: 8px; text-align: center;">₴500</td>
+                                       <td style="border: 1px solid #dddddd; padding: 8px; text-align: center;">₴${500 * this.panelCount}</td>
+                                   </tr>
+                                   ` : ''}
+                               </tbody>
+                               <tfoot>
+                                   <tr>
+                                       <td colspan="4" style="border: 1px solid #dddddd; padding: 8px; text-align: right;"><strong>Загальна вартість:</strong></td>
+                                       <td style="border: 1px solid #dddddd; padding: 8px; text-align: center;"><strong>₴${this.totalCost}</strong></td>
+                                   </tr>
+                               </tfoot>
+                           </table>
+                           <p style="text-align: center; margin-top: 20px;">Дякуємо за ваш вибір!</p>
+                       </div>
+                   `;
+
+                   // Создаем PDF с использованием html2pdf.js
+                   const options = {
+                       margin: 1,
+                       filename: 'invoice.pdf',
+                       image: { type: 'jpeg', quality: 0.98 },
+                       html2canvas: { scale: 2 },
+                       jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                   };
+                   html2pdf().from(invoiceContent).set(options).save();
+               }
             }
         });
     </script>
