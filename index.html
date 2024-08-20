@@ -11,38 +11,8 @@
     <!-- Подключение иконок Heroicons -->
     <script src="https://unpkg.com/heroicons@1.0.6/dist/outline.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@2.14.1/dist/full.css" rel="stylesheet">
     <style>
-        /* Custom styles for radio buttons and checkboxes */
-        .custom-checkbox, .custom-radio {
-            appearance: none;
-            background-color: #fff;
-            margin: 0;
-            font: inherit;
-            color: currentColor;
-            width: 1.5em;
-            height: 1.5em;
-            border: 2px solid #ccc;
-            border-radius: 0.25em;
-            display: grid;
-            place-content: center;
-            cursor: pointer;
-        }
-
-        .custom-checkbox:checked {
-            background-color: #3b82f6; /* Более мягкий синий цвет */
-            border-color: #3b82f6;
-        }
-
-        .custom-radio {
-            border-radius: 50%;
-        }
-
-        .custom-radio:checked {
-            background-color: #3b82f6; /* Более мягкий синий цвет */
-            border-color: #3b82f6;
-        }
-
-        /* Custom styles for dropdown categories */
         .category-dropdown {
             cursor: pointer;
             position: relative;
@@ -122,8 +92,8 @@
                         :id="type.value"
                         v-model="selectedType"
                         :value="type.value"
-                        class="custom-radio mr-4 mt-1"
-                    >
+                        class="radio radio-primary mr-4 mt-1"
+                    />
                     <div>
                         <label :for="type.value" class="block text-lg font-semibold cursor-pointer custom-radio-label">{{ type.label }}</label>
                         <p class="text-gray-500 text-sm">{{ type.description }}</p>
@@ -157,8 +127,8 @@
                             type="checkbox"
                             :id="option.name"
                             v-model="option.selected"
-                            class="custom-checkbox mr-4 mt-1"
-                        >
+                            class="checkbox checkbox-primary mr-4 mt-1"
+                        />
                         <div>
                             <label :for="option.name" class="block text-lg font-semibold cursor-pointer custom-checkbox-label">{{ option.label }}</label>
                             <p class="text-gray-500 text-sm">{{ option.description }}</p>
@@ -183,7 +153,7 @@
                     v-model="panelCount"
                     min="1"
                     max="100"
-                    class="p-2 w-full border border-gray-300 rounded-lg"
+                    class="input input-bordered w-full"
                 >
             </label>
             <div class="flex items-center space-x-3 mb-6">
@@ -191,7 +161,7 @@
                     type="checkbox"
                     id="needBatteries"
                     v-model="needBatteries"
-                    class="custom-checkbox mr-2"
+                    class="checkbox checkbox-primary mr-4 mt-1"
                 >
                 <label for="needBatteries" class="text-lg font-semibold">Потрібні акумулятори</label>
                 <p class="text-gray-500 text-sm">Ціна: ₴500 за одиницю</p>
