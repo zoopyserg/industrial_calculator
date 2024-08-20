@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera System Configurator</title>
+    <!-- Vue.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <!-- Minimal CSS -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .step {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin: 5px 0;
+        }
+        select, input[type="number"], input[type="checkbox"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background-color: #218838;
+        }
+        .summary {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .summary-total {
+            font-weight: bold;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <h1>Camera System Configurator</h1>
+
+        <!-- Шаг 1: Выбор типа объекта -->
+        <div class="step" v-if="step === 1">
+            <h2>Step 1: Select Object Type</h2>
+            <label>
+                <select v-model="selectedType">
+                    <option disabled value="">Please select one</option>
+                    <option value="Apartment">Apartment</option>
+                    <option value="House">House</option>
+                    <option value="Office">Office</option>
+                    <option value="Business">Business</option>
+                </select>
+            </label>
+            <button class="btn" @click="nextStep" :disabled="!selectedType">Next</button>
+        </div>
+
+        <!-- Шаг 2: Выбор опций -->
+        <div class="step" v-if="step === 2">
+            <h2>Step 2: Select Options</h2>
+            <div v-if="selectedType">
+                <label><input type="checkbox" v-model="options.wiredSurveillance"> Wired Surveillance (Cost: $300)</label>
+                <label><input type="checkbox" v-model="options.wirelessSurveillance"> Wireless Surveillance (Cost: $500)</label>
+                <label><input type="checkbox" v-model="options.videoRecording"> Video Recording (Cost: $200)</label>
+            </div>
+            <button class="btn" @click="nextStep">Next</button>
+        </div>
+
+        <!-- Шаг 3: Количество комнат и бесперебойное питание -->
+        <div class="step" v-if="step === 3">
+            <h2>Step 3: Room Information</h2>
+            <label>
+                Number of Rooms:
+                <input type="number" v-model="roomCount" min="1" max="10">
+            </label>
+            <label>
+                <input type="checkbox" v-model="hasBackupPower"> Backup Power Supply (Cost: $100)
+            </label>
+            <button class="btn" @click="nextStep">Show Summary</button>
+        </div>
+
+        <!-- Шаг 4: Итоговый заказ -->
+        <div class="step" v-if="step === 4">
+            <h2>Summary</h2>
+            <div class="summary">
+                <div class="summary-item" v-if="options.wiredSurveillance">
+                    <span>Wired Surveillance</span>
+                    <span>$300</span>
+                </div>
+                <div class="summary-item" v-if="options.wirelessSurveillance">
+                    <span>Wireless Surveillance</span>
+                    <span>$500</span>
+                </div>
+                <div class="summary-item" v-if="options.videoRecording">
+                    <span>Video Recording</span>
+                    <span>$200</span>
+                </div>
+                <div class="summary-item">
+                    <span>Number of Rooms</span>
+                    <span>{{ roomCount }}</span>
+                </div>
+                <div class="summary-item" v-if="hasBackupPower">
+                    <span>Backup Power Supply</span>
+                    <span>$100</span>
+                </div>
+                <div class="summary-total">
+                    <span>Total Cost</span>
+                    <span>${{ totalCost }}</span>
+                </div>
+            </div>
+            <button class="btn" @click="saveAsPDF">Save as PDF</button>
+        </div>
+    </div>
+
+    <!-- Vue.js код -->
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                step: 1,
+                selectedType: '',
+                options: {
+                    wiredSurveillance: false,
+                    wirelessSurveillance: false,
+                    videoRecording: false,
+                },
+                roomCount: 1,
+                hasBackupPower: false,
+            },
+            computed: {
+                totalCost() {
+                    let cost = 0;
+                    if (this.options.wiredSurveillance) cost += 300;
+                    if (this.options.wirelessSurveillance) cost += 500;
+                    if (this.options.videoRecording) cost += 200;
+                    if (this.hasBackupPower) cost += 100;
+                    return cost;
+                }
+            },
+            methods: {
+                nextStep() {
+                    this.step++;
+                },
+                saveAsPDF() {
+                    alert('PDF generation is not implemented in this MVP.');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
