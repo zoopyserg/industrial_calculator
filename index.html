@@ -62,6 +62,23 @@
             border: 2px solid #3b82f6;
             background-color: #e0f2fe;
         }
+        /* Стили для кнопки удаления */
+        .remove-button {
+            background-color: #f87171;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        /* Выровнять кнопки "Виключити" */
+        .component-item {
+            display: flex;
+            align-items: center;
+        }
+        .component-item button {
+            margin-left: auto;
+        }
     </style>
 </head>
 <body class="bg-gray-200 min-h-screen flex items-center justify-center">
@@ -99,9 +116,7 @@
                 <label class="block mb-2 font-semibold">Час автономної роботи (годин):</label>
                 <input type="number" v-model.number="autonomyHours" class="input input-bordered w-full" placeholder="Введіть час в годинах">
             </div>
-            <div class="mb-6" v-if="canProceed">
-                <p class="font-semibold">Необхідна ємність акумулятора: {{ batteryCapacity }} А·год</p>
-            </div>
+            <!-- Вернули кнопку "Допомогти розрахувати" и убрали "Почати з початку" -->
             <div class="flex justify-between mt-6">
                 <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-blue-600" @click="nextStep" :disabled="!canProceed">Далі</button>
                 <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-gray-600" @click="goToApplianceSelection">Допомогти розрахувати</button>
@@ -134,7 +149,7 @@
             </div>
             <div class="mb-6">
                 <h3 class="text-lg font-semibold mb-2">Виберіть прилади та час їх використання:</h3>
-                <div v-for="appliance in appliances" :key="appliance.name" class="mb-4">
+                <div v-for="appliance in appliances" :key="appliance.id" class="mb-4">
                     <div class="flex items-center">
                         <input type="checkbox" v-model="appliance.selected" class="checkbox checkbox-primary mr-4" @change="updateSelection(appliance)">
                         <div class="w-full">
@@ -157,11 +172,13 @@
             <div class="mb-6">
                 <p class="font-semibold">Загальна потужність: {{ calculatedWatts }} Вт</p>
                 <p class="font-semibold">Загальне енергоспоживання: {{ calculatedEnergy }} Вт·год</p>
-                <p class="font-semibold">Необхідна ємність акумулятора: {{ batteryCapacityFromAppliances }} А·год</p>
+                <!-- Убрали расчет емкости аккумулятора -->
             </div>
             <div class="flex justify-between mt-6">
                 <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-gray-600" @click="goToStep(1)">Назад</button>
-                <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-blue-600" @click="calculateFromAppliances">Розрахувати потужність</button>
+                <div>
+                    <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-blue-600 mr-2" @click="calculateFromAppliances">Далі</button>
+                </div>
             </div>
         </div>
 
@@ -169,18 +186,20 @@
         <div v-if="step === 2">
             <h2 class="text-xl font-semibold mb-4">Крок 2: Оберіть рекомендований комплект</h2>
             <div v-if="sortedKits.length > 0">
-                <div v-for="kit in sortedKits" :key="kit.name" class="mb-6 p-4 bg-gray-100 rounded-lg" :class="{ 'selected-kit': kit === selectedKit }">
+                <div v-for="kit in sortedKits" :key="kit.id" class="mb-6 p-4 bg-gray-100 rounded-lg" :class="{ 'selected-kit': kit.id === selectedKitId }">
                     <div class="flex justify-between items-center">
                         <div>
                             <h3 class="font-bold text-lg">{{ kit.name }}</h3>
                             <p class="text-gray-500">{{ kit.description }}</p>
-                            <p class="font-semibold">Потужність інвертора: {{ kit.power * 1000 }} Вт</p>
-                            <p class="font-semibold">Ємність акумуляторів: {{ kit.batteryCapacity }} А·год</p>
+                            <p v-if="kit.inverter"><strong>Інвертор:</strong> {{ kit.inverter.model }}</p>
+                            <p v-if="kit.batteries"><strong>Акумулятори:</strong> {{ kit.batteries.quantity }} × {{ kit.batteries.model }}</p>
+                            <!-- Не отображаем панели, если их нет в комплекте -->
+                            <p v-if="kit.panels"><strong>Сонячні панелі:</strong> {{ kit.panels.quantity }} × {{ kit.panels.model }}</p>
                         </div>
                         <div class="text-right">
                             <p class="text-xl font-bold">₴{{ formatPrice(kit.totalPrice) }}</p>
-                            <button class="py-2 px-4" :class="kit === selectedKit ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-500 hover:bg-green-600'" @click="selectKit(kit)" class="text-white font-semibold rounded-lg cursor-pointer transition mt-2">
-                                {{ kit === selectedKit ? 'Обрано' : 'Обрати' }}
+                            <button class="py-2 px-4" :class="kit.id === selectedKitId ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-500 hover:bg-green-600'" @click="selectKit(kit)" class="text-white font-semibold rounded-lg cursor-pointer transition mt-2">
+                                {{ kit.id === selectedKitId ? 'Обрано' : 'Обрати' }}
                             </button>
                         </div>
                     </div>
@@ -192,9 +211,9 @@
                             <!-- Детали комплекта -->
                             <h4 class="font-semibold">Склад комплекту:</h4>
                             <ul class="list-disc list-inside">
-                                <li><strong>Інвертор:</strong> {{ kit.inverter.model }} — ₴{{ formatPrice(kit.inverter.price) }}</li>
-                                <li><strong>Акумулятори:</strong> {{ kit.batteries.quantity }} × {{ kit.batteries.model }} — ₴{{ formatPrice(kit.batteries.totalPrice) }}</li>
-                                <li><strong>Сонячні панелі:</strong> {{ kit.panels.quantity }} × {{ kit.panels.model }} — ₴{{ formatPrice(kit.panels.totalPrice) }}</li>
+                                <li v-if="kit.inverter"><strong>Інвертор:</strong> {{ kit.inverter.model }} — ₴{{ formatPrice(kit.inverter.price) }}</li>
+                                <li v-if="kit.batteries"><strong>Акумулятори:</strong> {{ kit.batteries.quantity }} × {{ kit.batteries.model }} — ₴{{ formatPrice(kit.batteries.totalPrice) }}</li>
+                                <li v-if="kit.panels"><strong>Сонячні панелі:</strong> {{ kit.panels.quantity }} × {{ kit.panels.model }} — ₴{{ formatPrice(kit.panels.totalPrice) }}</li>
                                 <li><strong>Комплектуючі та монтаж:</strong> ₴{{ formatPrice(kit.accessories.price) }}</li>
                             </ul>
                         </div>
@@ -206,88 +225,29 @@
             </div>
             <div class="flex justify-between mt-6">
                 <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-gray-600" @click="goToStep(1)">Назад</button>
-                <!-- Убираем кнопку "Далі", так как переход происходит автоматически -->
+                <div>
+                    <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-blue-600" @click="nextStep" :disabled="!selectedKitId">Далі</button>
+                </div>
             </div>
         </div>
 
         <!-- Шаг 3: Живлення -->
         <div v-if="step === 3">
-            <h2 class="text-xl font-semibold mb-4">Крок 3: Оберіть спосіб живлення</h2>
-            <!-- Добавлено саммари выбранного комплекта -->
+            <h2 class="text-xl font-semibold mb-4">Крок 3: Живлення та налаштування</h2>
+            <!-- Саммари выбранного комплекта -->
             <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 class="font-bold mb-2">Вибраний комплект:</h3>
-                <p><strong>Інвертор:</strong> {{ selectedKit.inverter.model }}</p>
-                <p><strong>Сонячні панелі:</strong> {{ selectedKit.panels.model }}, {{ selectedKit.panels.quantity }} шт.</p>
-                <p><strong>Потужність панелей:</strong> {{ selectedKit.panels.totalPower }} Вт</p>
+                <h3 class="font-bold mb-2">Вибраний комплект: {{ selectedKit.name }}</h3>
+                <p><strong>Інвертор:</strong> {{ selectedInverter.model }}</p>
+                <p><strong>Акумулятори:</strong> {{ selectedBatteryQuantity }} × {{ selectedBattery.model }}</p>
+                <p v-if="selectedPanel"><strong>Сонячні панелі:</strong> {{ selectedPanelQuantity }} × {{ selectedPanel.model }}</p>
+                <p v-if="wiringReplacementSelected"><strong>Заміна проводки:</strong> Додано до комплекту</p>
+                <p><strong>Загальна вартість комплекту:</strong> ₴{{ formatPrice(totalPrice) }}</p>
+                <button class="py-2 px-4 bg-yellow-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-yellow-600 mt-2" @click="goToStep(2)">Обрати інший комплект</button>
             </div>
+
+            <!-- Настройки инвертора и аккумуляторов -->
             <div class="mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="p-4 bg-gray-100 rounded-lg">
-                        <h3 class="font-bold mb-2">Сонячні панелі</h3>
-                        <div class="mb-4">
-                            <label class="block mb-2 font-semibold">Вкажіть бажану потужність сонячних панелей (Вт):</label>
-                            <input type="number" v-model.number="solarPanelPower" class="input input-bordered w-full" placeholder="Введіть потужність">
-                        </div>
-                        <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-gray-600" @click="calculateSolarPanels">Допомогти вибрати</button>
-                        <div v-if="solarPanelsNeeded > 0" class="mt-4">
-                            <p class="font-semibold">Необхідно сонячних панелей: {{ solarPanelsNeeded }} шт.</p>
-                        </div>
-                        <p class="text-gray-500 mt-2">Ця функція допоможе вам розрахувати кількість сонячних панелей на основі бажаної потужності.</p>
-                    </div>
-                    <div class="p-4 bg-gray-100 rounded-lg">
-                        <h3 class="font-bold mb-2">Розетка</h3>
-                        <div class="mb-4">
-                            <label class="block mb-2 font-semibold">Тип проводки:</label>
-                            <select v-model="wiringType" class="select select-bordered w-full">
-                                <option value="">Оберіть тип проводки</option>
-                                <option value="copper">Мідна</option>
-                                <option value="aluminum">Алюмінієва</option>
-                            </select>
-                        </div>
-                        <div v-if="wiringType === 'aluminum'">
-                            <p class="text-red-500">Обмеження потужності до 1000 Вт.</p>
-                            <p class="font-semibold">Бажаєте замінити проводку?</p>
-                            <button class="py-2 px-4 bg-yellow-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-yellow-600" @click="replaceWiring">Замовити заміну проводки</button>
-                            <button class="py-2 px-4 bg-red-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-red-600 mt-2" @click="goToStep(2)">Обрати слабший комплект</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Добавлен выбор сонячних панелей -->
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-2">Оберіть сонячні панелі:</h3>
-                <div v-if="filteredPanels.length > 0">
-                    <div v-for="panel in filteredPanels" :key="panel.model" class="mb-4 p-4 bg-gray-100 rounded-lg" :class="{ 'selected-panel': panel === selectedPanel }">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <h4 class="font-bold">{{ panel.model }}</h4>
-                                <p>Потужність: {{ panel.power }} Вт</p>
-                                <p>Ціна: ₴{{ formatPrice(panel.price) }} за шт.</p>
-                            </div>
-                            <button class="py-2 px-4" :class="panel === selectedPanel ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-500 hover:bg-green-600'" @click="selectPanel(panel)" class="text-white font-semibold rounded-lg cursor-pointer transition">
-                                {{ panel === selectedPanel ? 'Обрано' : 'Обрати' }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div v-else>
-                    <p class="text-red-500">Немає сонячних панелей, що відповідають вашим вимогам. Спробуйте змінити параметри.</p>
-                </div>
-            </div>
-
-            <div class="flex justify-between mt-6">
-                <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-gray-600" @click="goToStep(2)">Назад</button>
-                <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-blue-600" @click="nextStep">Далі</button>
-            </div>
-        </div>
-
-        <!-- Шаг 4: Итоговый заказ -->
-        <div v-if="step === 4">
-            <h2 class="text-xl font-semibold mb-4">Крок 4: Підсумок та налаштування</h2>
-            <div class="bg-gray-100 p-4 rounded-lg space-y-4">
-                <h3 class="font-bold text-lg">Вибраний комплект:</h3>
-                <!-- Возможность изменить компоненты -->
+                <h3 class="text-lg font-semibold mb-2">Налаштування компонентів:</h3>
                 <div class="mb-4">
                     <h4 class="font-semibold">Інвертор:</h4>
                     <select v-model="selectedInverter" class="select select-bordered w-full">
@@ -296,40 +256,118 @@
                 </div>
                 <div class="mb-4">
                     <h4 class="font-semibold">Акумулятори:</h4>
-                    <div v-for="battery in batteries" :key="battery.model" class="flex items-center mb-2">
-                        <input type="radio" v-model="selectedBattery" :value="battery" class="radio radio-primary mr-2">
-                        <label>{{ battery.model }} ({{ battery.type }}) — ₴{{ formatPrice(battery.price) }}</label>
-                    </div>
+                    <select v-model="selectedBattery" class="select select-bordered w-full">
+                        <option v-for="battery in batteries" :value="battery">{{ battery.model }} ({{ battery.type }}) — ₴{{ formatPrice(battery.price) }}</option>
+                    </select>
                     <div class="flex items-center mt-2">
                         <label class="mr-2">Кількість:</label>
                         <input type="number" v-model.number="selectedBatteryQuantity" min="1" class="input input-bordered w-24">
                     </div>
                 </div>
+            </div>
+
+            <!-- Выбор солнечных панелей -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-2">Оберіть сонячні панелі:</h3>
                 <div class="mb-4">
-                    <h4 class="font-semibold">Сонячні панелі:</h4>
-                    <div>
-                        <label>{{ selectedPanel.model }} — ₴{{ formatPrice(selectedPanel.price) }} за шт.</label>
-                        <div class="flex items-center mt-2">
-                            <label class="mr-2">Кількість:</label>
-                            <input type="number" v-model.number="selectedPanelQuantity" min="0" class="input input-bordered w-24">
+                    <label class="block mb-2 font-semibold">Вкажіть бажану сумарну потужність сонячних панелей (Вт):</label>
+                    <input type="number" v-model.number="solarPanelPower" class="input input-bordered w-full" placeholder="Введіть потужність">
+                    <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-gray-600 mt-2" @click="calculateSolarPanels">Підібрати панелі</button>
+                </div>
+                <div v-if="filteredPanels.length > 0">
+                    <div v-for="panel in filteredPanels" :key="panel.id" class="mb-4 p-4 bg-gray-100 rounded-lg" :class="{ 'selected-panel': panel.id === selectedPanelId }">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold">{{ panel.model }}</h4>
+                                <p>Потужність: {{ panel.power }} Вт</p>
+                                <p>Ціна: ₴{{ formatPrice(panel.price) }} за шт.</p>
+                            </div>
+                            <button class="py-2 px-4" :class="panel.id === selectedPanelId ? 'bg-gray-500 hover:bg-gray-600' : 'bg-green-500 hover:bg-green-600'" @click="selectPanel(panel)" class="text-white font-semibold rounded-lg cursor-pointer transition">
+                                {{ panel.id === selectedPanelId ? 'Обрано' : 'Обрати' }}
+                            </button>
                         </div>
                     </div>
+                    <!-- Кнопка "Скинути вибір" -->
+                    <button class="py-2 px-4 bg-red-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-red-600" @click="resetPanelSelection">Скинути вибір</button>
                 </div>
-                <div class="mb-4">
-                    <h4 class="font-semibold">Комплектуючі та монтаж:</h4>
-                    <p>₴{{ formatPrice(selectedKit.accessories.price) }}</p>
+                <div v-else>
+                    <p class="text-red-500">Немає сонячних панелей, що відповідають вашим вимогам. Спробуйте змінити параметри.</p>
                 </div>
-                <div v-if="wiringReplacementSelected" class="mb-4">
-                    <h4 class="font-semibold">Заміна проводки:</h4>
-                    <p>₴100,000</p>
+            </div>
+
+            <!-- Выбор количества панелей -->
+            <div v-if="selectedPanel" class="mb-6">
+                <h4 class="font-semibold">Кількість сонячних панелей:</h4>
+                <input type="number" v-model.number="selectedPanelQuantity" min="0" class="input input-bordered w-24">
+                <!-- Рекомендованное количество панелей -->
+                <p class="text-gray-500 mt-2">Рекомендована кількість: {{ recommendedPanelQuantity }} шт.</p>
+            </div>
+
+            <!-- Выбор замены проводки -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-2">Заміна проводки:</h3>
+                <div>
+                    <label class="block mb-2 font-semibold">Тип проводки:</label>
+                    <select v-model="wiringType" class="select select-bordered w-full">
+                        <option value="">Оберіть тип проводки</option>
+                        <option value="copper">Мідна</option>
+                        <option value="aluminum">Алюмінієва</option>
+                    </select>
                 </div>
+                <div v-if="wiringType === 'aluminum'">
+                    <p class="text-red-500">Обмеження потужності до 1000 Вт.</p>
+                    <p class="font-semibold">Бажаєте замінити проводку?</p>
+                    <button class="py-2 px-4 bg-yellow-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-yellow-600" @click="replaceWiring">Замінити проводку</button>
+                </div>
+            </div>
+
+            <div class="flex justify-between mt-6">
+                <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-gray-600" @click="goToStep(2)">Назад</button>
+                <div>
+                    <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-blue-600" @click="nextStep">Далі</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Шаг 4: Итоговый заказ -->
+        <div v-if="step === 4">
+            <h2 class="text-xl font-semibold mb-4">Крок 4: Підсумок та налаштування</h2>
+            <div class="bg-gray-100 p-4 rounded-lg space-y-4">
+                <h3 class="font-bold text-lg">Вибраний комплект:</h3>
+                <!-- Итоговый список компонентов -->
+                <ul class="list-disc list-inside">
+                    <li class="component-item" v-if="!inverterRemoved && selectedInverter">
+                        <span><strong>Інвертор:</strong> {{ selectedInverter.model }} — ₴{{ formatPrice(selectedInverter.price) }}</span>
+                        <button class="remove-button" @click="removeComponent('inverter')">Виключити</button>
+                    </li>
+                    <li class="component-item" v-if="!batteryRemoved && selectedBattery">
+                        <span><strong>Акумулятори:</strong> {{ selectedBatteryQuantity }} × {{ selectedBattery.model }} — ₴{{ formatPrice(selectedBattery.price * selectedBatteryQuantity) }}</span>
+                        <button class="remove-button" @click="removeComponent('battery')">Виключити</button>
+                    </li>
+                    <li class="component-item" v-if="!panelRemoved && selectedPanel">
+                        <span><strong>Сонячні панелі:</strong> {{ selectedPanelQuantity }} × {{ selectedPanel.model }} — ₴{{ formatPrice(selectedPanel.price * selectedPanelQuantity) }}</span>
+                        <button class="remove-button" @click="removeComponent('panel')">Виключити</button>
+                    </li>
+                    <li class="component-item" v-if="!accessoriesRemoved">
+                        <span><strong>Комплектуючі та монтаж:</strong> ₴{{ formatPrice(selectedKit.accessories.price) }}</span>
+                        <button class="remove-button" @click="removeComponent('accessories')">Виключити</button>
+                    </li>
+                    <li class="component-item" v-if="wiringReplacementSelected">
+                        <span><strong>Заміна проводки:</strong> ₴100,000</span>
+                        <button class="remove-button" @click="removeComponent('wiring')">Виключити</button>
+                    </li>
+                </ul>
                 <div class="text-xl font-bold text-right">
                     <span>Загальна вартість: ₴{{ formatPrice(totalPrice) }}</span>
                 </div>
+                <!-- Кнопка "Обрати інший комплект" -->
+                <button class="py-2 px-4 bg-yellow-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-yellow-600 mt-4" @click="goToStep(2)">Обрати інший комплект</button>
             </div>
             <div class="flex justify-between mt-6">
                 <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-gray-600" @click="goToStep(3)">Назад</button>
-                <button class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-green-600" @click="finish">Завершити</button>
+                <div>
+                    <button class="py-2 px-4 bg-green-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-green-600" @click="finish">Замовити</button>
+                </div>
             </div>
         </div>
 
@@ -339,10 +377,10 @@
             <div class="bg-gray-100 p-4 rounded-lg space-y-4">
                 <h3 class="font-bold text-lg">Вибраний комплект:</h3>
                 <ul class="list-disc list-inside">
-                    <li><strong>Інвертор:</strong> {{ selectedInverter.model }} — ₴{{ formatPrice(selectedInverter.price) }}</li>
-                    <li><strong>Акумулятори:</strong> {{ selectedBatteryQuantity }} × {{ selectedBattery.model }} — ₴{{ formatPrice(selectedBattery.price * selectedBatteryQuantity) }}</li>
-                    <li><strong>Сонячні панелі:</strong> {{ selectedPanelQuantity }} × {{ selectedPanel.model }} — ₴{{ formatPrice(selectedPanel.price * selectedPanelQuantity) }}</li>
-                    <li><strong>Комплектуючі та монтаж:</strong> ₴{{ formatPrice(selectedKit.accessories.price) }}</li>
+                    <li v-if="!inverterRemoved && selectedInverter"><strong>Інвертор:</strong> {{ selectedInverter.model }} — ₴{{ formatPrice(selectedInverter.price) }}</li>
+                    <li v-if="!batteryRemoved && selectedBattery"><strong>Акумулятори:</strong> {{ selectedBatteryQuantity }} × {{ selectedBattery.model }} — ₴{{ formatPrice(selectedBattery.price * selectedBatteryQuantity) }}</li>
+                    <li v-if="!panelRemoved && selectedPanel"><strong>Сонячні панелі:</strong> {{ selectedPanelQuantity }} × {{ selectedPanel.model }} — ₴{{ formatPrice(selectedPanel.price * selectedPanelQuantity) }}</li>
+                    <li v-if="!accessoriesRemoved"><strong>Комплектуючі та монтаж:</strong> ₴{{ formatPrice(selectedKit.accessories.price) }}</li>
                     <li v-if="wiringReplacementSelected"><strong>Заміна проводки:</strong> ₴100,000</li>
                 </ul>
                 <div class="text-xl font-bold text-right">
@@ -353,8 +391,10 @@
                 <h3 class="font-bold text-lg">Дякуємо за використання нашого конфігуратора!</h3>
             </div>
             <div class="flex justify-between mt-6">
-                <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-gray-600" @click="startOver">Почати спочатку</button>
-                <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-blue-600" @click="generatePDF">Зберегти в PDF</button>
+                <button class="py-2 px-4 bg-gray-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-gray-600" @click="startOver">Почати з початку</button>
+                <div>
+                    <button class="py-2 px-4 bg-blue-500 text-white font-semibold rounded-lg cursor-pointer transition hover:bg-blue-600" @click="generatePDF">Зберегти в PDF</button>
+                </div>
             </div>
         </div>
 
@@ -370,96 +410,96 @@
                 autonomyHours: null,
                 appliances: [
                     // Базовая категория
-                    { name: 'led_lamp', label: 'LED лампа', power: 10, hours: 5, quantity: 5, selected: false, description: 'Освітлення', category: 'basic', defaultHours: 5, defaultQuantity: 5 },
-                    { name: 'wifi_router', label: 'Wi-Fi роутер', power: 10, hours: 24, quantity: 1, selected: false, description: 'Інтернет', category: 'basic', defaultHours: 24, defaultQuantity: 1 },
-                    { name: 'smartphone_charge', label: 'Зарядка смартфона', power: 5, hours: 3, quantity: 2, selected: false, description: 'Зарядка телефонів', category: 'basic', defaultHours: 3, defaultQuantity: 2 },
+                    { id: 1, name: 'led_lamp', label: 'LED лампа', power: 10, hours: 5, quantity: 5, selected: false, description: 'Освітлення', category: 'basic', defaultHours: 5, defaultQuantity: 5 },
+                    { id: 2, name: 'wifi_router', label: 'Wi-Fi роутер', power: 10, hours: 24, quantity: 1, selected: false, description: 'Інтернет', category: 'basic', defaultHours: 24, defaultQuantity: 1 },
+                    { id: 3, name: 'smartphone_charge', label: 'Зарядка смартфона', power: 5, hours: 3, quantity: 2, selected: false, description: 'Зарядка телефонів', category: 'basic', defaultHours: 3, defaultQuantity: 2 },
                     // Комфорт категория
-                    { name: 'fridge', label: 'Холодильник', power: 150, hours: 8, quantity: 1, selected: false, description: 'Зберігання продуктів', category: 'comfort', defaultHours: 8, defaultQuantity: 1 },
-                    { name: 'tv', label: 'Телевізор', power: 100, hours: 4, quantity: 1, selected: false, description: 'Розваги', category: 'comfort', defaultHours: 4, defaultQuantity: 1 },
-                    { name: 'laptop', label: 'Ноутбук', power: 60, hours: 6, quantity: 1, selected: false, description: 'Робота та розваги', category: 'comfort', defaultHours: 6, defaultQuantity: 1 },
+                    { id: 4, name: 'fridge', label: 'Холодильник', power: 150, hours: 8, quantity: 1, selected: false, description: 'Зберігання продуктів', category: 'comfort', defaultHours: 8, defaultQuantity: 1 },
+                    { id: 5, name: 'tv', label: 'Телевізор', power: 100, hours: 4, quantity: 1, selected: false, description: 'Розваги', category: 'comfort', defaultHours: 4, defaultQuantity: 1 },
+                    { id: 6, name: 'laptop', label: 'Ноутбук', power: 60, hours: 6, quantity: 1, selected: false, description: 'Робота та розваги', category: 'comfort', defaultHours: 6, defaultQuantity: 1 },
                     // Лакшери категория
-                    { name: 'air_conditioner', label: 'Кондиціонер', power: 1000, hours: 6, quantity: 1, selected: false, description: 'Комфортна температура', category: 'luxury', defaultHours: 6, defaultQuantity: 1 },
-                    { name: 'electric_stove', label: 'Електроплита', power: 2000, hours: 2, quantity: 1, selected: false, description: 'Приготування їжі', category: 'luxury', defaultHours: 2, defaultQuantity: 1 },
-                    { name: 'washing_machine', label: 'Пральна машина', power: 500, hours: 1, quantity: 1, selected: false, description: 'Прання одягу', category: 'luxury', defaultHours: 1, defaultQuantity: 1 },
+                    { id: 7, name: 'air_conditioner', label: 'Кондиціонер', power: 1000, hours: 6, quantity: 1, selected: false, description: 'Комфортна температура', category: 'luxury', defaultHours: 6, defaultQuantity: 1 },
+                    { id: 8, name: 'electric_stove', label: 'Електроплита', power: 2000, hours: 2, quantity: 1, selected: false, description: 'Приготування їжі', category: 'luxury', defaultHours: 2, defaultQuantity: 1 },
+                    { id: 9, name: 'washing_machine', label: 'Пральна машина', power: 500, hours: 1, quantity: 1, selected: false, description: 'Прання одягу', category: 'luxury', defaultHours: 1, defaultQuantity: 1 },
                 ],
                 kits: [
                     // Обновленные данные комплектов
                     {
+                        id: 1,
                         name: 'Комплект 1 кВт',
                         description: 'Міні комплект для базових потреб.',
-                        power: 1, // в кВт
+                        power: 1000, // в Вт
                         inverter: { model: 'Inverter 1kW', price: 10000 },
                         batteries: { model: 'Battery 100Ah', quantity: 2, totalPrice: 20000 },
                         batteryCapacity: 200, // в А·год
-                        panels: { model: 'Panel 250W', quantity: 4, price: 5000, totalPrice: 20000, totalPower: 1000 },
                         accessories: { price: 5000 },
-                        totalPrice: 55000,
+                        totalPrice: 35000,
                         showDetails: false
                     },
                     {
+                        id: 2,
                         name: 'Комплект 3 кВт',
                         description: 'Підходить для базових потреб.',
-                        power: 3,
+                        power: 3000,
                         inverter: { model: 'Growatt SPF 3000T HVM', price: 15000 },
                         batteries: { model: 'Pylontech US2000B Plus', quantity: 2, totalPrice: 76000 },
                         batteryCapacity: 200,
-                        panels: { model: 'Сонячна панель 330 Вт', quantity: 10, price: 5000, totalPrice: 50000, totalPower: 3300 },
                         accessories: { price: 15000 },
-                        totalPrice: 156000,
+                        totalPrice: 106000,
                         showDetails: false
                     },
                     {
+                        id: 3,
                         name: 'Комплект 5 кВт',
                         description: 'Підходить для базових та середніх потреб.',
-                        power: 5,
+                        power: 5000,
                         inverter: { model: 'Growatt SPF 5000 ES', price: 22000 },
                         batteries: { model: 'Pylontech US2000B Plus', quantity: 4, totalPrice: 152000 },
                         batteryCapacity: 400,
-                        panels: { model: 'Сонячна панель 330 Вт', quantity: 15, price: 5000, totalPrice: 75000, totalPower: 4950 },
                         accessories: { price: 20000 },
-                        totalPrice: 269000,
+                        totalPrice: 194000,
                         showDetails: false
                     },
                     {
-                        name: 'Комплект 8 кВт',
-                        description: 'Для середніх та високих потреб.',
-                        power: 8,
-                        inverter: { model: 'Victron Multiplus-II 48/8000/110', price: 70000 },
-                        batteries: { model: 'Pylontech US2000B Plus', quantity: 6, totalPrice: 228000 },
-                        batteryCapacity: 600,
-                        panels: { model: 'Сонячна панель 330 Вт', quantity: 24, price: 5000, totalPrice: 120000, totalPower: 7920 },
-                        accessories: { price: 30000 },
-                        totalPrice: 448000,
+                        id: 4,
+                        name: 'Комплект без акумуляторів',
+                        description: 'Комплект без акумуляторів та сонячних панелей.',
+                        power: 3000,
+                        inverter: { model: 'Growatt SPF 3000T HVM', price: 15000 },
+                        accessories: { price: 10000 },
+                        totalPrice: 25000,
                         showDetails: false
                     },
                     // Добавьте дополнительные комплекты, если необходимо
                 ],
+                selectedKitId: null,
                 selectedKit: null,
                 selectedInverter: null,
                 selectedBattery: null,
                 selectedBatteryQuantity: 1,
+                selectedPanelId: null,
+                selectedPanel: null,
                 selectedPanelQuantity: 0,
                 inverters: [
-                    { model: 'Inverter 1kW', power: 1, voltage: 24, price: 10000 },
-                    { model: 'Growatt SPF 3000T HVM', power: 3, voltage: 24, price: 15000 },
-                    { model: 'Growatt SPF 5000 ES', power: 5, voltage: 48, price: 22000 },
-                    { model: 'Victron Multiplus-II 48/8000/110', power: 8, voltage: 48, price: 70000 },
+                    { id: 1, model: 'Inverter 1kW', power: 1000, voltage: 24, price: 10000 },
+                    { id: 2, model: 'Growatt SPF 3000T HVM', power: 3000, voltage: 24, price: 15000 },
+                    { id: 3, model: 'Growatt SPF 5000 ES', power: 5000, voltage: 48, price: 22000 },
+                    { id: 4, model: 'Victron Multiplus-II 48/8000/110', power: 8000, voltage: 48, price: 70000 },
                     // Добавьте другие инверторы
                 ],
                 batteries: [
-                    { model: 'Battery 100Ah', capacity: 100, voltage: 12, price: 10000, type: 'AGM' },
-                    { model: 'Pylontech US2000B Plus', capacity: 50, voltage: 48, price: 38000, type: 'LiFePO4' },
-                    { model: 'LogicPower LP-GL 12-200', capacity: 200, voltage: 12, price: 11000, type: 'Гелева' },
-                    { model: 'Delta GX 12-100', capacity: 100, voltage: 12, price: 6000, type: 'AGM' },
+                    { id: 1, model: 'Battery 100Ah', capacity: 100, voltage: 12, price: 10000, type: 'AGM' },
+                    { id: 2, model: 'Pylontech US2000B Plus', capacity: 50, voltage: 48, price: 38000, type: 'LiFePO4' },
+                    { id: 3, model: 'LogicPower LP-GL 12-200', capacity: 200, voltage: 12, price: 11000, type: 'Гелева' },
+                    { id: 4, model: 'Delta GX 12-100', capacity: 100, voltage: 12, price: 6000, type: 'AGM' },
                     // Добавьте другие аккумуляторы
                 ],
                 panels: [
-                    { model: 'Сонячна панель 330 Вт', power: 330, price: 5000 },
-                    { model: 'Сонячна панель 250 Вт', power: 250, price: 4000 },
-                    { model: 'Сонячна панель 500 Вт', power: 500, price: 8000 },
+                    { id: 1, model: 'Сонячна панель 330 Вт', power: 330, price: 5000 },
+                    { id: 2, model: 'Сонячна панель 250 Вт', power: 250, price: 4000 },
+                    { id: 3, model: 'Сонячна панель 500 Вт', power: 500, price: 8000 },
                     // Добавьте другие панели
                 ],
-                selectedPanel: null,
                 additionalParams: {
                     goal: '',
                     reason: '',
@@ -469,15 +509,14 @@
                 solarPanelsNeeded: 0,
                 wiringType: '',
                 wiringReplacementSelected: false,
+                inverterRemoved: false,
+                batteryRemoved: false,
+                panelRemoved: false,
+                accessoriesRemoved: false,
             },
             computed: {
                 canProceed() {
                     return this.knownWatts > 0 && this.autonomyHours > 0;
-                },
-                batteryCapacity() {
-                    const voltage = 220; // Изменено на 220 В
-                    const totalEnergy = this.knownWatts * this.autonomyHours;
-                    return Math.ceil(totalEnergy / voltage);
                 },
                 selectedAppliances() {
                     return this.appliances.filter(appliance => appliance.selected);
@@ -488,40 +527,49 @@
                 calculatedEnergy() {
                     return this.selectedAppliances.reduce((sum, appliance) => sum + (appliance.power * appliance.hours * appliance.quantity), 0);
                 },
-                batteryCapacityFromAppliances() {
-                    const voltage = 220; // Изменено на 220 В
-                    return Math.ceil(this.calculatedEnergy / voltage);
-                },
                 sortedKits() {
                     const requiredPower = this.knownWatts || this.calculatedWatts;
-                    const requiredBatteryCapacity = this.batteryCapacity || this.batteryCapacityFromAppliances;
-                    const filteredKits = this.kits.filter(kit => {
-                        return (kit.power * 1000 >= requiredPower) && (kit.batteryCapacity >= requiredBatteryCapacity);
-                    });
-                    return filteredKits.sort((a, b) => {
-                        const diffA = (a.power * 1000 - requiredPower) + (a.batteryCapacity - requiredBatteryCapacity);
-                        const diffB = (b.power * 1000 - requiredPower) + (b.batteryCapacity - requiredBatteryCapacity);
-                        return diffA - diffB;
+                    return this.kits.filter(kit => {
+                        return kit.power >= requiredPower;
+                    }).sort((a, b) => {
+                        return a.power - b.power;
                     });
                 },
                 filteredPanels() {
                     if (!this.solarPanelPower) return this.panels;
                     return this.panels.filter(panel => panel.power <= this.solarPanelPower);
                 },
-                totalPrice() {
-                    const inverterPrice = this.selectedInverter ? this.selectedInverter.price : 0;
-                    const batteryPrice = this.selectedBattery ? this.selectedBattery.price * this.selectedBatteryQuantity : 0;
-                    const panelsPrice = this.selectedPanelQuantity * (this.selectedPanel ? this.selectedPanel.price : 0);
-                    const accessoriesPrice = this.selectedKit.accessories.price;
-                    const wiringPrice = this.wiringReplacementSelected ? 100000 : 0;
-                    return inverterPrice + batteryPrice + panelsPrice + accessoriesPrice + wiringPrice;
+                recommendedPanelQuantity() {
+                    if (this.selectedPanel && this.solarPanelPower) {
+                        return Math.ceil(this.solarPanelPower / this.selectedPanel.power);
+                    }
+                    return 0;
                 },
+                totalPrice() {
+                    let total = 0;
+                    if (!this.inverterRemoved && this.selectedInverter) {
+                        total += this.selectedInverter.price;
+                    }
+                    if (!this.batteryRemoved && this.selectedBattery) {
+                        total += this.selectedBattery.price * this.selectedBatteryQuantity;
+                    }
+                    if (!this.panelRemoved && this.selectedPanel) {
+                        total += this.selectedPanel.price * this.selectedPanelQuantity;
+                    }
+                    if (!this.accessoriesRemoved) {
+                        total += this.selectedKit.accessories.price;
+                    }
+                    if (this.wiringReplacementSelected) {
+                        total += 100000;
+                    }
+                    return total;
+                }
             },
             methods: {
                 nextStep() {
                     if (this.step === 1 && this.canProceed) {
                         this.step = 2;
-                    } else if (this.step === 2 && this.selectedKit) {
+                    } else if (this.step === 2 && this.selectedKitId) {
                         this.step = 3;
                     } else if (this.step === 3) {
                         this.step = 4;
@@ -569,29 +617,54 @@
                     this.step = 2;
                 },
                 selectKit(kit) {
+                    this.selectedKitId = kit.id;
                     this.selectedKit = JSON.parse(JSON.stringify(kit));
-                    this.selectedInverter = this.inverters.find(inv => inv.model === kit.inverter.model);
-                    this.selectedBattery = this.batteries.find(bat => bat.model === kit.batteries.model);
-                    this.selectedBatteryQuantity = kit.batteries.quantity;
-                    this.selectedPanelQuantity = kit.panels.quantity;
-                    this.selectedPanel = this.panels.find(p => p.model === kit.panels.model);
-                    // Переходим на следующий шаг автоматически
-                    this.nextStep();
+                    this.selectedInverter = this.inverters.find(inv => inv.model === (kit.inverter ? kit.inverter.model : null));
+                    this.selectedBattery = this.batteries.find(bat => bat.model === (kit.batteries ? kit.batteries.model : null));
+                    this.selectedBatteryQuantity = kit.batteries ? kit.batteries.quantity : 0;
+                    this.selectedPanelQuantity = kit.panels ? kit.panels.quantity : 0;
+                    this.selectedPanel = this.panels.find(p => p.model === (kit.panels ? kit.panels.model : null));
+                    this.inverterRemoved = false;
+                    this.batteryRemoved = false;
+                    this.panelRemoved = false;
+                    this.accessoriesRemoved = false;
+                    this.wiringReplacementSelected = false;
+                    this.step = 3;
                 },
                 calculateSolarPanels() {
-                    const panelPower = 330; // Мощность одной панели
-                    if (this.solarPanelPower) {
-                        this.solarPanelsNeeded = Math.ceil(this.solarPanelPower / panelPower);
-                    } else {
-                        this.solarPanelsNeeded = 0;
-                    }
+                    // Эта функция теперь просто обновляет список панелей на основе введенной мощности
                 },
                 replaceWiring() {
                     this.wiringReplacementSelected = true;
-                    alert('Послуга заміни проводки додана до замовлення.');
+                    alert('Послуга заміни проводки додана до комплекту.');
                 },
                 selectPanel(panel) {
+                    this.selectedPanelId = panel.id;
                     this.selectedPanel = panel;
+                    this.panelRemoved = false;
+                },
+                resetPanelSelection() {
+                    this.selectedPanelId = null;
+                    this.selectedPanel = null;
+                    this.selectedPanelQuantity = 0;
+                },
+                removeComponent(component) {
+                    if (component === 'inverter') {
+                        this.inverterRemoved = true;
+                        this.selectedInverter = null;
+                    } else if (component === 'battery') {
+                        this.batteryRemoved = true;
+                        this.selectedBattery = null;
+                        this.selectedBatteryQuantity = 0;
+                    } else if (component === 'panel') {
+                        this.panelRemoved = true;
+                        this.selectedPanel = null;
+                        this.selectedPanelQuantity = 0;
+                    } else if (component === 'accessories') {
+                        this.accessoriesRemoved = true;
+                    } else if (component === 'wiring') {
+                        this.wiringReplacementSelected = false;
+                    }
                 },
                 finish() {
                     this.step = 5;
